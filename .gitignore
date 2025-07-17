@@ -1,0 +1,19 @@
+# Flutter/Dart standard
+.dart_tool/
+.packages
+.pub/
+build/
+.idea/
+.vscode/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Ignorer tous les assets
+assets/
+
+# Ignorer les fichiers de configuration et documentation spécifiques
+cursor-rules
+*.md
