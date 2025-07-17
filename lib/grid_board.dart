@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'level_goal.dart';
 
 /// Widget principal de la grille de jeu Hack The Grid.
 /// Gère l'état de la grille, la sélection, la suppression et le remplissage.
@@ -24,11 +25,16 @@ class GridBoard extends StatefulWidget {
 class _GridBoardState extends State<GridBoard> {
   late List<List<int>> grid; // indices d'icônes
   List<Offset> selected = []; // positions sélectionnées
+  int score = 0;
+  int movesLeft = 20;
+  late LevelGoal goal;
 
   @override
   void initState() {
     super.initState();
     _generateGrid();
+    // Objectif : supprimer 10 firewalls (index 1)
+    goal = RemoveIconsGoal(iconIndex: 1, targetCount: 10);
   }
 
   void _generateGrid() {
@@ -37,11 +43,15 @@ class _GridBoardState extends State<GridBoard> {
       List.generate(GridBoard.gridSize, (_) => rand.nextInt(GridBoard.iconAssets.length))
     );
     selected.clear();
+    score = 0;
+    movesLeft = 20;
+    goal = RemoveIconsGoal(iconIndex: 1, targetCount: 10);
   }
 
   void _onTileTap(int row, int col) {
     final iconIdx = grid[row][col];
     final pos = Offset(row.toDouble(), col.toDouble());
+    if (goal.isCompleted || movesLeft <= 0) return;
     if (selected.isEmpty) {
       setState(() {
         selected = [pos];
@@ -61,10 +71,16 @@ class _GridBoardState extends State<GridBoard> {
           grid[first.dx.toInt()][first.dy.toInt()] = -1;
           grid[row][col] = -1;
           selected.clear();
+          score += 10;
+          movesLeft--;
+          goal.onIconsRemoved([firstIdx, iconIdx]);
           _dropAndFill();
         });
       } else {
-        setState(() => selected.clear());
+        setState(() {
+          selected.clear();
+          movesLeft--;
+        });
       }
       return;
     }
@@ -119,6 +135,29 @@ class _GridBoardState extends State<GridBoard> {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // HUD
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              Text('Score: $score', style: const TextStyle(fontSize: 20, color: Colors.tealAccent)),
+              Text('Moves: $movesLeft', style: const TextStyle(fontSize: 20, color: Colors.tealAccent)),
+              Flexible(child: Text(goal.description, style: const TextStyle(fontSize: 16, color: Colors.white), overflow: TextOverflow.ellipsis)),
+            ],
+          ),
+        ),
+        if (goal.isCompleted)
+          const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Text('🎉 Goal completed! 🎉', style: TextStyle(fontSize: 24, color: Colors.greenAccent)),
+          ),
+        if (movesLeft == 0 && !goal.isCompleted)
+          const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Text('Game Over', style: TextStyle(fontSize: 24, color: Colors.redAccent)),
+          ),
+        // Grille
         Expanded(
           child: AspectRatio(
             aspectRatio: 1,
@@ -174,7 +213,9 @@ class _GridBoardState extends State<GridBoard> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               ElevatedButton(
-                onPressed: _generateGrid,
+                onPressed: () {
+                  setState(_generateGrid);
+                },
                 child: const Text('Reset'),
               ),
             ],
