@@ -94,8 +94,7 @@ class VictoryDialog extends StatelessWidget {
 
 class GameOverDialog extends StatelessWidget {
   final VoidCallback onRetry;
-  final VoidCallback onNext;
-  const GameOverDialog({super.key, required this.onRetry, required this.onNext});
+  const GameOverDialog({super.key, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -131,40 +130,22 @@ class GameOverDialog extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Hack failed!\nTry again or skip to the next mission.',
+              'Hack failed!\nTry again to continue your mission.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 20, color: Colors.white70),
             ),
             const SizedBox(height: 32),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-                    textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 8,
-                  ),
-                  onPressed: onRetry,
-                  child: const Text('RETRY'),
-                ),
-                const SizedBox(width: 24),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.tealAccent,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-                    textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 8,
-                  ),
-                  onPressed: onNext,
-                  child: const Text('NEXT'),
-                ),
-              ],
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 8,
+              ),
+              onPressed: onRetry,
+              child: const Text('RETRY'),
             ),
           ],
         ),
@@ -498,9 +479,6 @@ class _GridBoardState extends State<GridBoard> {
           GameOverDialog(
             onRetry: () {
               _loadLevel(currentLevel);
-            },
-            onNext: () {
-              _loadLevel(currentLevel + 1);
             },
           ),
       ],
