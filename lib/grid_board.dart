@@ -29,6 +29,68 @@ class _PendingAnimation {
   _PendingAnimation(this.pos, this.assetPath);
 }
 
+class VictoryDialog extends StatelessWidget {
+  final VoidCallback onNext;
+  const VictoryDialog({super.key, required this.onNext});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 32),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.95),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.tealAccent, width: 4),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.tealAccent.withOpacity(0.4),
+              blurRadius: 24,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.verified_user, color: Colors.tealAccent, size: 64),
+            const SizedBox(height: 24),
+            const Text(
+              'HACK SUCCESSFUL',
+              style: TextStyle(
+                fontSize: 32,
+                color: Colors.tealAccent,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2,
+                shadows: [Shadow(color: Colors.black, blurRadius: 8)],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Mission completed!\nYou can proceed to the next challenge.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 20, color: Colors.white70),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.tealAccent,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                textStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 8,
+              ),
+              onPressed: onNext,
+              child: const Text('NEXT MISSION'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _GridBoardState extends State<GridBoard> {
   late List<List<int>> grid; // indices d'icônes
   List<Offset> selected = [];
@@ -210,116 +272,186 @@ class _GridBoardState extends State<GridBoard> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    // Déterminer l'icône de l'objectif si applicable
+    String? goalIcon;
+    if (goal is RemoveIconsGoal) {
+      final idx = (goal as RemoveIconsGoal).iconIndex;
+      goalIcon = GridBoard.iconAssets[idx];
+    }
+    return Stack(
       children: [
-        // HUD
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Text('Score: $score', style: const TextStyle(fontSize: 20, color: Colors.tealAccent)),
-              Text('Moves: $movesLeft', style: const TextStyle(fontSize: 20, color: Colors.tealAccent)),
-              Flexible(child: Text(goal.description, style: const TextStyle(fontSize: 16, color: Colors.white), overflow: TextOverflow.ellipsis)),
-            ],
-          ),
-        ),
-        if (goal.isCompleted)
-          const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Text('🎉 Goal completed! 🎉', style: TextStyle(fontSize: 24, color: Colors.greenAccent)),
-          ),
-        if (movesLeft == 0 && !goal.isCompleted)
-          const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Text('Game Over', style: TextStyle(fontSize: 24, color: Colors.redAccent)),
-          ),
-        // Grille
-        Expanded(
-          child: AspectRatio(
-            aspectRatio: 1,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final cellSize = constraints.maxWidth / GridBoard.gridSize;
-                  return Listener(
-                    onPointerDown: (event) {
-                      final box = gridKey.currentContext?.findRenderObject() as RenderBox?;
-                      if (box != null) {
-                        final local = box.globalToLocal(event.position);
-                        _startDrag(local);
-                      }
-                    },
-                    onPointerMove: (event) {
-                      final box = gridKey.currentContext?.findRenderObject() as RenderBox?;
-                      if (box != null) {
-                        final local = box.globalToLocal(event.position);
-                        _updateDrag(local);
-                      }
-                    },
-                    onPointerUp: (_) => _endDrag(),
-                    child: Stack(
-                      children: [
-                        GridView.builder(
-                          key: gridKey,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: GridBoard.gridSize,
-                            crossAxisSpacing: 4,
-                            mainAxisSpacing: 4,
-                          ),
-                          itemCount: GridBoard.gridSize * GridBoard.gridSize,
-                          itemBuilder: (context, index) {
-                            final row = index ~/ GridBoard.gridSize;
-                            final col = index % GridBoard.gridSize;
-                            final iconIdx = grid[row][col];
-                            if (iconIdx == -1) {
-                              return const SizedBox.shrink();
-                            }
-                            final assetPath = GridBoard.iconAssets[iconIdx];
-                            return CyberTile(
-                              assetPath: assetPath,
-                              isBeingRemoved: false,
-                            );
-                          },
-                        ),
-                        // Overlay des animations de suppression
-                        ..._pendingAnimations.map((anim) {
-                          return Positioned(
-                            left: anim.pos.dy * cellSize,
-                            top: anim.pos.dx * cellSize,
-                            width: cellSize,
-                            height: cellSize,
-                            child: CyberTile(
-                              assetPath: anim.assetPath,
-                              isBeingRemoved: true,
+        Column(
+          children: [
+            GoalHUD(
+              score: score,
+              movesLeft: movesLeft,
+              goal: goal,
+              iconAsset: goalIcon,
+            ),
+            if (movesLeft == 0 && !goal.isCompleted)
+              const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text('Game Over', style: TextStyle(fontSize: 24, color: Colors.redAccent)),
+              ),
+            Expanded(
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final cellSize = constraints.maxWidth / GridBoard.gridSize;
+                      return Listener(
+                        onPointerDown: (event) {
+                          final box = gridKey.currentContext?.findRenderObject() as RenderBox?;
+                          if (box != null) {
+                            final local = box.globalToLocal(event.position);
+                            _startDrag(local);
+                          }
+                        },
+                        onPointerMove: (event) {
+                          final box = gridKey.currentContext?.findRenderObject() as RenderBox?;
+                          if (box != null) {
+                            final local = box.globalToLocal(event.position);
+                            _updateDrag(local);
+                          }
+                        },
+                        onPointerUp: (_) => _endDrag(),
+                        child: Stack(
+                          children: [
+                            GridView.builder(
+                              key: gridKey,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: GridBoard.gridSize,
+                                crossAxisSpacing: 4,
+                                mainAxisSpacing: 4,
+                              ),
+                              itemCount: GridBoard.gridSize * GridBoard.gridSize,
+                              itemBuilder: (context, index) {
+                                final row = index ~/ GridBoard.gridSize;
+                                final col = index % GridBoard.gridSize;
+                                final iconIdx = grid[row][col];
+                                if (iconIdx == -1) {
+                                  return const SizedBox.shrink();
+                                }
+                                final assetPath = GridBoard.iconAssets[iconIdx];
+                                return CyberTile(
+                                  assetPath: assetPath,
+                                  isBeingRemoved: false,
+                                );
+                              },
                             ),
-                          );
-                        }).toList(),
-                      ],
-                    ),
-                  );
-                },
+                            // Overlay des animations de suppression
+                            ..._pendingAnimations.map((anim) {
+                              return Positioned(
+                                left: anim.pos.dy * cellSize,
+                                top: anim.pos.dx * cellSize,
+                                width: cellSize,
+                                height: cellSize,
+                                child: CyberTile(
+                                  assetPath: anim.assetPath,
+                                  isBeingRemoved: true,
+                                ),
+                              );
+                            }).toList(),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton(
-                onPressed: () {
-                  setState(_generateGrid);
-                },
-                child: const Text('Reset'),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(_generateGrid);
+                    },
+                    child: const Text('Reset'),
+                  ),
+                ],
               ),
+            ),
+          ],
+        ),
+        if (goal.isCompleted)
+          VictoryDialog(
+            onNext: () {
+              setState(_generateGrid);
+            },
+          ),
+      ],
+    );
+  }
+}
+
+class GoalHUD extends StatelessWidget {
+  final int score;
+  final int movesLeft;
+  final LevelGoal goal;
+  final String? iconAsset;
+  const GoalHUD({
+    super.key,
+    required this.score,
+    required this.movesLeft,
+    required this.goal,
+    this.iconAsset,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.tealAccent, width: 2),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.score, color: Colors.tealAccent, size: 32),
+              const SizedBox(width: 8),
+              Text('Score: $score', style: const TextStyle(fontSize: 26, color: Colors.tealAccent, fontWeight: FontWeight.bold)),
             ],
           ),
-        ),
-      ],
+          const SizedBox(width: 24),
+          Row(
+            children: [
+              const Icon(Icons.flash_on, color: Colors.tealAccent, size: 32),
+              const SizedBox(width: 8),
+              Text('Moves: $movesLeft', style: const TextStyle(fontSize: 26, color: Colors.tealAccent, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(width: 24),
+          Flexible(
+            child: Row(
+              children: [
+                if (iconAsset != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Image.asset(iconAsset!, width: 36, height: 36),
+                  ),
+                Flexible(
+                  child: Text(
+                    goal.description,
+                    style: const TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
