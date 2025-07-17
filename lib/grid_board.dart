@@ -92,6 +92,87 @@ class VictoryDialog extends StatelessWidget {
   }
 }
 
+class GameOverDialog extends StatelessWidget {
+  final VoidCallback onRetry;
+  final VoidCallback onNext;
+  const GameOverDialog({super.key, required this.onRetry, required this.onNext});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 32),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.95),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.redAccent, width: 4),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.redAccent.withOpacity(0.4),
+              blurRadius: 24,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 64),
+            const SizedBox(height: 24),
+            const Text(
+              'ACCESS DENIED',
+              style: TextStyle(
+                fontSize: 32,
+                color: Colors.redAccent,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2,
+                shadows: [Shadow(color: Colors.black, blurRadius: 8)],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Hack failed!\nTry again or skip to the next mission.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 20, color: Colors.white70),
+            ),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                    textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 8,
+                  ),
+                  onPressed: onRetry,
+                  child: const Text('RETRY'),
+                ),
+                const SizedBox(width: 24),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.tealAccent,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                    textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 8,
+                  ),
+                  onPressed: onNext,
+                  child: const Text('NEXT'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _GridBoardState extends State<GridBoard> {
   late List<List<int>> grid; // indices d'icônes
   List<Offset> selected = [];
@@ -409,6 +490,15 @@ class _GridBoardState extends State<GridBoard> {
         ),
         if (goal.isCompleted)
           VictoryDialog(
+            onNext: () {
+              _loadLevel(currentLevel + 1);
+            },
+          ),
+        if (movesLeft == 0 && !goal.isCompleted)
+          GameOverDialog(
+            onRetry: () {
+              _loadLevel(currentLevel);
+            },
             onNext: () {
               _loadLevel(currentLevel + 1);
             },
