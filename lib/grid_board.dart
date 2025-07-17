@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'level_goal.dart';
 import 'cyber_tile.dart';
+import 'level.dart';
 
 /// Widget principal de la grille de jeu Hack The Grid.
 /// Gère l'état de la grille, la sélection, la suppression et le remplissage.
@@ -100,6 +101,8 @@ class _GridBoardState extends State<GridBoard> {
   bool isDragging = false;
   GlobalKey gridKey = GlobalKey();
   final List<_PendingAnimation> _pendingAnimations = [];
+  int currentLevel = 0;
+  late Level level;
 
   // Stocke le dernier type d'icône supprimé pour chaque position animée
   final Map<Offset, int> _lastRemovedIconIdx = {};
@@ -109,8 +112,23 @@ class _GridBoardState extends State<GridBoard> {
   @override
   void initState() {
     super.initState();
-    _generateGrid();
-    goal = RemoveIconsGoal(iconIndex: 1, targetCount: 10);
+    _loadLevel(0);
+  }
+
+  void _loadLevel(int idx) {
+    setState(() {
+      currentLevel = idx % levels.length;
+      level = levels[currentLevel];
+      goal = level.goal is RemoveIconsGoal
+          ? RemoveIconsGoal(
+              iconIndex: (level.goal as RemoveIconsGoal).iconIndex,
+              targetCount: (level.goal as RemoveIconsGoal).targetCount,
+            )
+          : level.goal;
+      movesLeft = level.moves;
+      score = 0;
+      _generateGrid();
+    });
   }
 
   void _generateGrid() {
@@ -119,9 +137,6 @@ class _GridBoardState extends State<GridBoard> {
       List.generate(GridBoard.gridSize, (_) => rand.nextInt(GridBoard.iconAssets.length))
     );
     selected.clear();
-    score = 0;
-    movesLeft = 20;
-    goal = RemoveIconsGoal(iconIndex: 1, targetCount: 10);
   }
 
   void _removeTiles(List<Offset> tiles, int iconIdx) {
@@ -282,6 +297,19 @@ class _GridBoardState extends State<GridBoard> {
       children: [
         Column(
           children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(
+                level.name,
+                style: const TextStyle(
+                  fontSize: 28,
+                  color: Colors.tealAccent,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                  shadows: [Shadow(color: Colors.black, blurRadius: 8)],
+                ),
+              ),
+            ),
             GoalHUD(
               score: score,
               movesLeft: movesLeft,
@@ -382,7 +410,7 @@ class _GridBoardState extends State<GridBoard> {
         if (goal.isCompleted)
           VictoryDialog(
             onNext: () {
-              setState(_generateGrid);
+              _loadLevel(currentLevel + 1);
             },
           ),
       ],
