@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'grid_tile.dart' as custom;
 
 /// Widget animé pour effet de suppression cyberpunk (pulse, scale, glitch, fade).
 class CyberTile extends StatefulWidget {
   final String assetPath;
   final bool isBeingRemoved;
   final VoidCallback? onAnimationEnd;
+  final custom.GridTile? tile; // Permet de passer la tuile pour affichage spécial
 
   const CyberTile({
     super.key,
     required this.assetPath,
     required this.isBeingRemoved,
     this.onAnimationEnd,
+    this.tile,
   });
 
   @override
@@ -89,7 +92,34 @@ class _CyberTileState extends State<CyberTile> with SingleTickerProviderStateMix
                     ),
                   ],
                 ),
-                child: child,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    child!,
+                   if (widget.tile is custom.TimerChipTile)
+                     Positioned(
+                       bottom: 4,
+                       right: 4,
+                       child: Container(
+                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                         decoration: BoxDecoration(
+                           color: Colors.black.withOpacity(0.7),
+                           borderRadius: BorderRadius.circular(8),
+                           border: Border.all(color: Colors.tealAccent, width: 1),
+                         ),
+                         child: Text(
+                           (widget.tile as custom.TimerChipTile).timer.toString(),
+                           style: const TextStyle(
+                             color: Colors.tealAccent,
+                             fontWeight: FontWeight.bold,
+                             fontSize: 16,
+                             shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                           ),
+                         ),
+                       ),
+                     ),
+                  ],
+                ),
               ),
             ),
           ),

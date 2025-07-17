@@ -9,21 +9,21 @@ abstract class LevelGoal {
   bool get isCompleted;
 
   /// Appelé à chaque suppression d'icônes.
-  /// [removedIcons] : liste des indices d'icônes supprimées.
-  void onIconsRemoved(List<int> removedIcons);
+  /// [removedTypes] : liste des types de tuiles supprimées.
+  void onIconsRemoved(List<dynamic> removedTypes);
 }
 
 /// Objectif : supprimer un certain nombre d'icônes d'un type donné.
 class RemoveIconsGoal extends LevelGoal {
-  final int iconIndex; // index dans la liste des assets
+  final String iconType; // type de tuile (ex : 'timer_chip', 'firewall', etc.)
   final int targetCount;
   int _currentCount = 0;
 
-  RemoveIconsGoal({required this.iconIndex, required this.targetCount});
+  RemoveIconsGoal({required this.iconType, required this.targetCount});
 
   @override
   String get description =>
-      'Remove $targetCount ${_iconName(iconIndex)}s ($progress/$targetCount)';
+      'Remove $targetCount ${_iconName(iconType)}s ($progress/$targetCount)';
 
   int get progress => _currentCount;
 
@@ -31,27 +31,28 @@ class RemoveIconsGoal extends LevelGoal {
   bool get isCompleted => _currentCount >= targetCount;
 
   @override
-  void onIconsRemoved(List<int> removedIcons) {
-    _currentCount += removedIcons.where((idx) => idx == iconIndex).length;
+  void onIconsRemoved(List<dynamic> removedTypes) {
+    _currentCount += removedTypes.where((type) => type == iconType).length;
   }
 
-  String _iconName(int idx) {
-    // À adapter si tu veux des noms plus jolis ou localisés
-    switch (idx) {
-      case 1:
+  String _iconName(String type) {
+    switch (type) {
+      case 'firewall':
         return 'firewall';
-      case 0:
+      case 'lock':
         return 'lock';
-      case 2:
+      case 'ai_chip':
         return 'AI chip';
-      case 3:
+      case 'bug':
         return 'bug';
-      case 4:
+      case 'warning':
         return 'warning';
-      case 5:
+      case 'save_disk':
         return 'save disk';
-      case 6:
+      case 'node_chain':
         return 'node chain';
+      case 'timer_chip':
+        return 'Timer Chip';
       default:
         return 'icon';
     }

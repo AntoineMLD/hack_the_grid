@@ -17,3 +17,5 @@ assets/
 # Ignorer les fichiers de configuration et documentation spécifiques
 cursor-rules
 *.md
+Liste_des_100_niveaux_Hack_the_Grid.csv
+Liste_icones.md

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'level_goal.dart';
 import 'cyber_tile.dart';
 import 'level.dart';
+import 'grid_tile.dart' as custom;
 
 /// Widget principal de la grille de jeu Hack The Grid.
 /// Gère l'état de la grille, la sélection, la suppression et le remplissage.
@@ -155,7 +156,7 @@ class GameOverDialog extends StatelessWidget {
 }
 
 class _GridBoardState extends State<GridBoard> {
-  late List<List<int>> grid; // indices d'icônes
+  late List<List<custom.GridTile?>> grid; // Grille d'objets GridTile ou null
   List<Offset> selected = [];
   int score = 0;
   int movesLeft = 20;
@@ -183,7 +184,7 @@ class _GridBoardState extends State<GridBoard> {
       level = levels[currentLevel];
       goal = level.goal is RemoveIconsGoal
           ? RemoveIconsGoal(
-              iconIndex: (level.goal as RemoveIconsGoal).iconIndex,
+              iconType: (level.goal as RemoveIconsGoal).iconType,
               targetCount: (level.goal as RemoveIconsGoal).targetCount,
             )
           : level.goal;
@@ -195,27 +196,96 @@ class _GridBoardState extends State<GridBoard> {
 
   void _generateGrid() {
     final rand = Random();
-    grid = List.generate(GridBoard.gridSize, (_) =>
-      List.generate(GridBoard.gridSize, (_) => rand.nextInt(GridBoard.iconAssets.length))
+    grid = List.generate(GridBoard.gridSize, (row) =>
+      List.generate(GridBoard.gridSize, (col) {
+        // Niveau 1 : insérer des Timer Chips
+        if (currentLevel == 0 && rand.nextDouble() < 0.2) {
+          return custom.TimerChipTile(initialTimer: 5);
+        }
+        // Sinon, tuile classique
+        int iconIdx = rand.nextInt(GridBoard.iconAssets.length);
+        return custom.BasicGridTile(
+          assetPath: GridBoard.iconAssets[iconIdx],
+          type: _iconTypeFromIdx(iconIdx),
+        );
+      })
     );
     selected.clear();
   }
 
-  void _removeTiles(List<Offset> tiles, int iconIdx) {
+  String _iconTypeFromIdx(int idx) {
+    switch (idx) {
+      case 0:
+        return 'lock';
+      case 1:
+        return 'firewall';
+      case 2:
+        return 'ai_chip';
+      case 3:
+        return 'bug';
+      case 4:
+        return 'warning';
+      case 5:
+        return 'save_disk';
+      case 6:
+        return 'node_chain';
+      default:
+        return 'icon';
+    }
+  }
+
+  // Ajoute une fonction pour obtenir l'asset à partir du type
+  String? _iconAssetFromType(String type) {
+    switch (type) {
+      case 'lock':
+        return GridBoard.iconAssets[0];
+      case 'firewall':
+        return GridBoard.iconAssets[1];
+      case 'ai_chip':
+        return GridBoard.iconAssets[2];
+      case 'bug':
+        return GridBoard.iconAssets[3];
+      case 'warning':
+        return GridBoard.iconAssets[4];
+      case 'save_disk':
+        return GridBoard.iconAssets[5];
+      case 'node_chain':
+        return GridBoard.iconAssets[6];
+      case 'timer_chip':
+        return 'assets/icons/Timer_Chip.png';
+      default:
+        return null;
+    }
+  }
+
+  void _removeTiles(List<Offset> tiles) {
+    // 1. Mémoriser les types des tuiles supprimées
+    final removedTypes = <String>[];
     setState(() {
       for (final pos in tiles) {
-        _pendingAnimations.add(_PendingAnimation(pos, GridBoard.iconAssets[iconIdx]));
-        grid[pos.dx.toInt()][pos.dy.toInt()] = -1;
+        final tile = grid[pos.dx.toInt()][pos.dy.toInt()];
+        if (tile != null) {
+          _pendingAnimations.add(_PendingAnimation(pos, tile.assetPath));
+          removedTypes.add(tile.type);
+        }
       }
-      score += 10 * tiles.length;
-      movesLeft--;
-      goal.onIconsRemoved(List.filled(tiles.length, iconIdx));
       selected.clear();
-      _dropAndFill();
+      isDragging = false;
     });
+    // 2. Attendre la fin de l'animation avant de supprimer les tuiles et de continuer la logique
     Future.delayed(const Duration(milliseconds: 350), () {
       setState(() {
+        for (final pos in tiles) {
+          grid[pos.dx.toInt()][pos.dy.toInt()] = null;
+        }
         _pendingAnimations.removeWhere((anim) => tiles.contains(anim.pos));
+        score += 10 * tiles.length;
+        movesLeft--;
+        // Utiliser la liste mémorisée
+        goal.onIconsRemoved(removedTypes);
+        _decrementAllTimers();
+        _checkTimerChips();
+        _dropAndFill();
       });
     });
   }
@@ -235,9 +305,10 @@ class _GridBoardState extends State<GridBoard> {
     final pos = _offsetToGrid(localPos);
     if (pos == null) return;
     if (selected.isEmpty) return;
-    final firstIdx = grid[selected.first.dx.toInt()][selected.first.dy.toInt()];
-    final iconIdx = grid[pos.dx.toInt()][pos.dy.toInt()];
-    if (iconIdx != firstIdx) return;
+    final firstTile = grid[selected.first.dx.toInt()][selected.first.dy.toInt()];
+    final currentTile = grid[pos.dx.toInt()][pos.dy.toInt()];
+    if (firstTile == null || currentTile == null) return;
+    if (currentTile.type != firstTile.type) return;
     if (selected.contains(pos)) return;
     if (!_isAdjacent(selected.last, pos)) return;
     setState(() {
@@ -249,7 +320,7 @@ class _GridBoardState extends State<GridBoard> {
     if (!isDragging) return;
     if (selected.length >= 2) {
       final firstIdx = grid[selected.first.dx.toInt()][selected.first.dy.toInt()];
-      _removeTiles(List.of(selected), firstIdx);
+      _removeTiles(List.of(selected));
       isDragging = false;
     } else {
       setState(() {
@@ -275,10 +346,11 @@ class _GridBoardState extends State<GridBoard> {
         setState(() => selected.clear());
         return;
       }
-      final firstIdx = grid[first.dx.toInt()][first.dy.toInt()];
-      final iconIdx = grid[row][col];
-      if (iconIdx == firstIdx) {
-        _removeTiles([first, Offset(row.toDouble(), col.toDouble())], iconIdx);
+      final firstTile = grid[first.dx.toInt()][first.dy.toInt()];
+      final currentTile = grid[row][col];
+      if (firstTile == null || currentTile == null) return;
+      if (currentTile.type == firstTile.type) {
+        _removeTiles([first, Offset(row.toDouble(), col.toDouble())]);
       } else {
         setState(() {
           selected.clear();
@@ -306,7 +378,7 @@ class _GridBoardState extends State<GridBoard> {
     // Supprimer les tuiles sélectionnées
     setState(() {
       for (final pos in selected) {
-        grid[pos.dx.toInt()][pos.dy.toInt()] = -1; // -1 = vide
+        grid[pos.dx.toInt()][pos.dy.toInt()] = null; // null = vide
       }
       selected.clear();
       _dropAndFill();
@@ -316,20 +388,48 @@ class _GridBoardState extends State<GridBoard> {
   void _dropAndFill() {
     final rand = Random();
     for (int col = 0; col < GridBoard.gridSize; col++) {
-      // 1. Récupérer les tuiles non -1 de bas en haut
-      List<int> nonEmpty = [];
+      // 1. Récupérer les tuiles non null de bas en haut
+      List<custom.GridTile> nonEmpty = [];
       for (int row = GridBoard.gridSize - 1; row >= 0; row--) {
-        if (grid[row][col] != -1) {
-          nonEmpty.add(grid[row][col]);
+        if (grid[row][col] != null) {
+          nonEmpty.add(grid[row][col]!);
         }
       }
       // 2. Compléter avec des nouvelles tuiles aléatoires en haut
       while (nonEmpty.length < GridBoard.gridSize) {
-        nonEmpty.add(rand.nextInt(GridBoard.iconAssets.length));
+        int iconIdx = rand.nextInt(GridBoard.iconAssets.length);
+        nonEmpty.add(custom.BasicGridTile(
+          assetPath: GridBoard.iconAssets[iconIdx],
+          type: _iconTypeFromIdx(iconIdx),
+        ));
       }
       // 3. Réécrire la colonne dans la grille (de bas en haut)
       for (int row = GridBoard.gridSize - 1, idx = 0; row >= 0; row--, idx++) {
         grid[row][col] = nonEmpty[idx];
+      }
+    }
+  }
+
+  void _decrementAllTimers() {
+    for (var row in grid) {
+      for (var tile in row) {
+        if (tile is custom.TimerChipTile) {
+          tile.decrementTimer();
+        }
+      }
+    }
+  }
+
+  void _checkTimerChips() {
+    for (var row in grid) {
+      for (var tile in row) {
+        if (tile is custom.TimerChipTile && tile.timer <= 0) {
+          // Effet : game over immédiat (à adapter selon la logique souhaitée)
+          setState(() {
+            movesLeft = 0;
+          });
+          return;
+        }
       }
     }
   }
@@ -352,8 +452,8 @@ class _GridBoardState extends State<GridBoard> {
     // Déterminer l'icône de l'objectif si applicable
     String? goalIcon;
     if (goal is RemoveIconsGoal) {
-      final idx = (goal as RemoveIconsGoal).iconIndex;
-      goalIcon = GridBoard.iconAssets[idx];
+      final type = (goal as RemoveIconsGoal).iconType;
+      goalIcon = _iconAssetFromType(type);
     }
     return Stack(
       children: [
@@ -421,14 +521,14 @@ class _GridBoardState extends State<GridBoard> {
                               itemBuilder: (context, index) {
                                 final row = index ~/ GridBoard.gridSize;
                                 final col = index % GridBoard.gridSize;
-                                final iconIdx = grid[row][col];
-                                if (iconIdx == -1) {
+                                final tile = grid[row][col];
+                                if (tile == null) {
                                   return const SizedBox.shrink();
                                 }
-                                final assetPath = GridBoard.iconAssets[iconIdx];
                                 return CyberTile(
-                                  assetPath: assetPath,
+                                  assetPath: tile.assetPath,
                                   isBeingRemoved: false,
+                                  tile: tile,
                                 );
                               },
                             ),

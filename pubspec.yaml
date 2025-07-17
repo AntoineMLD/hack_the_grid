@@ -69,6 +69,16 @@ flutter:
     - assets/icons/icon_node_chain_clean.png
     - assets/icons/icon_save_disk_clean.png
     - assets/icons/icon_warning_clean.png
+    - assets/icons/Quantum_Loop.png
+    - assets/icons/Magnet_Link.png
+    - assets/icons/Signal_Jammer.png
+    - assets/icons/EMP_Pulse.png
+    - assets/icons/Trojan.png
+    - assets/icons/Timer_Chip.png
+    - assets/icons/Encrypted_Link.png
+    - assets/icons/Virus_Injector.png
+    - assets/icons/Power_node.png
+    - assets/icons/trap_hole.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
