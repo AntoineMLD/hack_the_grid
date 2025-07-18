@@ -35,6 +35,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   csv: ^5.0.0
+  audioplayers: ^6.5.0
 
 dev_dependencies:
   flutter_test:
@@ -82,6 +83,7 @@ flutter:
     - assets/icons/trap_hole.png
     - assets/icons/Encrypted_Link_Decrypted.png
     - assets/startmission.png
+    - assets/sound/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

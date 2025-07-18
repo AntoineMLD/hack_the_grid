@@ -426,6 +426,8 @@ class _GridBoardState extends State<GridBoard> {
         _pendingSpecialToShow = newSpecial;
       });
     }
+    // Vérifie qu'il y a au moins un coup possible
+    _reshuffleIfNoMoves();
   }
 
   /// Crée une instance de tuile spéciale selon le type
@@ -750,6 +752,8 @@ class _GridBoardState extends State<GridBoard> {
         grid[row][col] = nonEmpty[idx];
       }
     }
+    // Après chaque drop/fill, vérifie qu'il reste un coup possible
+    _reshuffleIfNoMoves();
   }
 
   void _decrementAllTimers() {
@@ -1015,6 +1019,56 @@ class _GridBoardState extends State<GridBoard> {
         _pendingSpecialToShow = null;
       });
     }
+  }
+
+  // Vérifie s'il existe au moins une combinaison possible sur la grille
+  bool _hasPossibleMove() {
+    for (int row = 0; row < GridBoard.gridSize; row++) {
+      for (int col = 0; col < GridBoard.gridSize; col++) {
+        final tile = grid[row][col];
+        if (tile == null) continue;
+        // Vérifie les 4 directions
+        for (final d in [
+          const Offset(1, 0),
+          const Offset(0, 1),
+        ]) {
+          final r2 = row + d.dx.toInt();
+          final c2 = col + d.dy.toInt();
+          if (r2 < 0 || r2 >= GridBoard.gridSize || c2 < 0 || c2 >= GridBoard.gridSize) continue;
+          final tile2 = grid[r2][c2];
+          if (tile2 == null) continue;
+          // Joker : quantum_loop peut matcher avec tout
+          if (tile.type == tile2.type || tile.type == 'quantum_loop' || tile2.type == 'quantum_loop') {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  // Mélange la grille jusqu'à ce qu'il y ait un coup possible
+  void _reshuffleIfNoMoves() {
+    int tries = 0;
+    while (!_hasPossibleMove() && tries < 20) {
+      // Mélange toutes les tuiles non nulles
+      final allTiles = <custom.GridTile>[];
+      for (var row in grid) {
+        for (var tile in row) {
+          if (tile != null) allTiles.add(tile);
+        }
+      }
+      allTiles.shuffle();
+      for (int row = 0, idx = 0; row < GridBoard.gridSize; row++) {
+        for (int col = 0; col < GridBoard.gridSize; col++) {
+          if (grid[row][col] != null) {
+            grid[row][col] = allTiles[idx++];
+          }
+        }
+      }
+      tries++;
+    }
+    setState(() {});
   }
 
   @override

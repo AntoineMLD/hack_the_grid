@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math';
 import 'grid_board.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 void main() {
   runApp(const HackTheGridApp());
@@ -14,23 +15,54 @@ class HackTheGridApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Hack The Grid',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.tealAccent),
-        useMaterial3: true,
-        fontFamily: 'VT323',
-        scaffoldBackgroundColor: Colors.black,
-        textTheme: const TextTheme(
-          bodyLarge: TextStyle(color: Colors.white),
-          bodyMedium: TextStyle(color: Colors.white),
-          bodySmall: TextStyle(color: Colors.white),
+    return _AppWithMusic(
+      child: MaterialApp(
+        title: 'Hack The Grid',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.tealAccent),
+          useMaterial3: true,
+          fontFamily: 'VT323',
+          scaffoldBackgroundColor: Colors.black,
+          textTheme: const TextTheme(
+            bodyLarge: TextStyle(color: Colors.white),
+            bodyMedium: TextStyle(color: Colors.white),
+            bodySmall: TextStyle(color: Colors.white),
+          ),
         ),
+        home: const SplashScreen(),
       ),
-      home: const SplashScreen(),
     );
   }
+}
+
+/// Widget qui gère la musique d'ambiance en boucle
+class _AppWithMusic extends StatefulWidget {
+  final Widget child;
+  const _AppWithMusic({required this.child});
+  @override
+  State<_AppWithMusic> createState() => _AppWithMusicState();
+}
+
+class _AppWithMusicState extends State<_AppWithMusic> {
+  late final AudioPlayer _player;
+  @override
+  void initState() {
+    super.initState();
+    _player = AudioPlayer();
+    _startMusic();
+  }
+  Future<void> _startMusic() async {
+    await _player.setReleaseMode(ReleaseMode.loop);
+    await _player.play(AssetSource('sound/ambiance.mp3'));
+  }
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// Simple splash screen with background and logo.
