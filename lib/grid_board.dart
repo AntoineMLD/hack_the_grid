@@ -5,6 +5,7 @@ import 'cyber_tile.dart';
 import 'level.dart';
 import 'grid_tile.dart' as custom;
 import 'dart:async';
+import 'ui/mission_briefing_popup.dart';
 
 /// Widget principal de la grille de jeu Hack The Grid.
 /// Gère l'état de la grille, la sélection, la suppression et le remplissage.
@@ -1145,6 +1146,12 @@ class _GridBoardState extends State<GridBoard> {
             ),
           ],
         ),
+        if (_pendingSpecialToShow != null)
+          SpecialTileIntroPopup(
+            type: _pendingSpecialToShow!,
+            info: specialTileInfo[_pendingSpecialToShow!]!,
+            onAcknowledge: _onAcknowledgeSpecial,
+          ),
         if (goal.isCompleted)
           VictoryDialog(
             onNext: () {
@@ -1157,12 +1164,6 @@ class _GridBoardState extends State<GridBoard> {
             onRetry: () {
               _loadLevel(currentLevel);
             },
-          ),
-        if (_pendingSpecialToShow != null)
-          SpecialTileIntroPopup(
-            type: _pendingSpecialToShow!,
-            info: specialTileInfo[_pendingSpecialToShow!]!,
-            onAcknowledge: _onAcknowledgeSpecial,
           ),
       ],
     );

@@ -81,6 +81,7 @@ flutter:
     - assets/icons/Power_node.png
     - assets/icons/trap_hole.png
     - assets/icons/Encrypted_Link_Decrypted.png
+    - assets/startmission.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
