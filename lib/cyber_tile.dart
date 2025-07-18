@@ -7,6 +7,7 @@ class CyberTile extends StatefulWidget {
   final bool isBeingRemoved;
   final VoidCallback? onAnimationEnd;
   final custom.GridTile? tile; // Permet de passer la tuile pour affichage spécial
+  final String? highlightEffect; // Ajouté : effet visuel spécial
 
   const CyberTile({
     super.key,
@@ -14,6 +15,7 @@ class CyberTile extends StatefulWidget {
     required this.isBeingRemoved,
     this.onAnimationEnd,
     this.tile,
+    this.highlightEffect,
   });
 
   @override
@@ -73,6 +75,110 @@ class _CyberTileState extends State<CyberTile> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
+    Widget tileImage = Image.asset(widget.assetPath, fit: BoxFit.contain);
+
+    // Effet visuel spécial selon highlightEffect
+    if (widget.highlightEffect == 'emp_pulse') {
+      tileImage = AnimatedOpacity(
+        opacity: 0.5,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        child: Container(
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: Colors.cyanAccent.withOpacity(0.7),
+                blurRadius: 32,
+                spreadRadius: 8,
+              ),
+            ],
+          ),
+          child: tileImage,
+        ),
+      );
+    } else if (widget.highlightEffect == 'magnet') {
+      tileImage = TweenAnimationBuilder<double>(
+        tween: Tween(begin: 1.0, end: 1.1),
+        duration: const Duration(milliseconds: 300),
+        builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
+        child: tileImage,
+      );
+    } else if (widget.highlightEffect == 'trojan' || widget.highlightEffect == 'virus_injector') {
+      tileImage = TweenAnimationBuilder<double>(
+        tween: Tween(begin: 1.0, end: 1.15),
+        duration: const Duration(milliseconds: 250),
+        builder: (context, scale, child) => Transform.scale(
+          scale: scale,
+          child: ColorFiltered(
+            colorFilter: ColorFilter.mode(Colors.pinkAccent.withOpacity(0.5), BlendMode.modulate),
+            child: child!,
+          ),
+        ),
+        child: tileImage,
+      );
+    } else if (widget.highlightEffect == 'signal_jammer') {
+      tileImage = AnimatedOpacity(
+        opacity: 0.5 + 0.5 * (DateTime.now().millisecond % 2),
+        duration: const Duration(milliseconds: 100),
+        child: ColorFiltered(
+          colorFilter: ColorFilter.mode(Colors.tealAccent.withOpacity(0.3), BlendMode.screen),
+          child: tileImage,
+        ),
+      );
+    } else if (widget.highlightEffect == 'encrypted_link') {
+      tileImage = TweenAnimationBuilder<double>(
+        tween: Tween(begin: 1.0, end: 1.2),
+        duration: const Duration(milliseconds: 250),
+        builder: (context, scale, child) => Transform.scale(
+          scale: scale,
+          child: ColorFiltered(
+            colorFilter: ColorFilter.mode(Colors.cyanAccent.withOpacity(0.5), BlendMode.lighten),
+            child: child!,
+          ),
+        ),
+        child: tileImage,
+      );
+    } else if (widget.highlightEffect == 'quantum_loop') {
+      tileImage = TweenAnimationBuilder<double>(
+        tween: Tween(begin: 1.0, end: 1.1),
+        duration: const Duration(milliseconds: 400),
+        builder: (context, scale, child) => Transform.scale(
+          scale: scale,
+          child: ColorFiltered(
+            colorFilter: ColorFilter.mode(Colors.purpleAccent.withOpacity(0.4), BlendMode.screen),
+            child: child!,
+          ),
+        ),
+        child: tileImage,
+      );
+    } else if (widget.highlightEffect == 'trap_hole') {
+      tileImage = TweenAnimationBuilder<double>(
+        tween: Tween(begin: 1.0, end: 0.95),
+        duration: const Duration(milliseconds: 120),
+        builder: (context, scale, child) => Transform.scale(
+          scale: scale,
+          child: ColorFiltered(
+            colorFilter: ColorFilter.mode(Colors.redAccent.withOpacity(0.5), BlendMode.modulate),
+            child: child!,
+          ),
+        ),
+        child: tileImage,
+      );
+    } else if (widget.highlightEffect == 'power_node') {
+      tileImage = TweenAnimationBuilder<double>(
+        tween: Tween(begin: 1.0, end: 1.15),
+        duration: const Duration(milliseconds: 200),
+        builder: (context, scale, child) => Transform.scale(
+          scale: scale,
+          child: ColorFiltered(
+            colorFilter: ColorFilter.mode(Colors.yellowAccent.withOpacity(0.5), BlendMode.screen),
+            child: child!,
+          ),
+        ),
+        child: tileImage,
+      );
+    }
+
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
@@ -95,7 +201,7 @@ class _CyberTileState extends State<CyberTile> with SingleTickerProviderStateMix
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    child!,
+                    tileImage,
                    if (widget.tile is custom.TimerChipTile)
                      Positioned(
                        bottom: 4,
@@ -125,7 +231,7 @@ class _CyberTileState extends State<CyberTile> with SingleTickerProviderStateMix
           ),
         );
       },
-      child: Image.asset(widget.assetPath, fit: BoxFit.contain),
+      child: null,
     );
   }
 } 

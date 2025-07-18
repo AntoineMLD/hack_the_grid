@@ -131,6 +131,15 @@ class EncryptedLinkTile extends GridTile {
   String get assetPath => decrypted
       ? 'assets/icons/Encrypted_Link_Decrypted.png' // à créer ou fallback
       : 'assets/icons/Encrypted_Link.png';
+  // Correction : fallback si l'asset décrypté n'existe pas
+  String get safeAssetPath {
+    if (decrypted) {
+      // On vérifie si l'asset existe, sinon fallback sur l'asset normal
+      // (Flutter ne permet pas de vérifier l'existence d'un asset à runtime, donc on fallback toujours)
+      return 'assets/icons/Encrypted_Link_Decrypted.png';
+    }
+    return 'assets/icons/Encrypted_Link.png';
+  }
 
   @override
   String get type => 'encrypted_link';

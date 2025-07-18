@@ -187,6 +187,12 @@ class _GridBoardState extends State<GridBoard> {
   String? _pendingSpecialToShow;
   Set<Offset> _magnetizedTiles = {};
   Set<Offset> _empPulseHighlight = {};
+  Set<Offset> _trojanHighlight = {};
+  Set<Offset> _virusInjectorHighlight = {};
+  Set<Offset> _encryptedLinkHighlight = {};
+  Set<Offset> _quantumLoopHighlight = {};
+  Set<Offset> _trapHoleHighlight = {};
+  Set<Offset> _powerNodeHighlight = {};
 
   static const Map<String, Map<String, String>> specialTileInfo = {
     'emp_pulse': {
@@ -286,6 +292,12 @@ class _GridBoardState extends State<GridBoard> {
       _hiddenTiles.clear(); // Vider les tuiles cachées par Signal Jammer
       _magnetizedTiles.clear(); // Vider les tuiles surlignées Magnet Link
       _empPulseHighlight.clear(); // Vider l'effet EMP Pulse
+      _trojanHighlight.clear();
+      _virusInjectorHighlight.clear();
+      _encryptedLinkHighlight.clear();
+      _quantumLoopHighlight.clear();
+      _trapHoleHighlight.clear();
+      _powerNodeHighlight.clear();
       currentLevel = idx % levels.length;
       level = levels[currentLevel];
       goal = level.goal is RemoveIconsGoal
@@ -778,32 +790,106 @@ class _GridBoardState extends State<GridBoard> {
   }
 
   void _triggerSpecialEffect(String effect, int row, int col) {
+    final pos = Offset(row.toDouble(), col.toDouble());
     switch (effect) {
       case 'trojan':
-        _contaminateRandomNeighbor(row, col);
+        setState(() => _trojanHighlight.add(pos));
+        Future.delayed(const Duration(milliseconds: 400), () {
+          setState(() => _trojanHighlight.remove(pos));
+        });
+        // Appliquer la contamination sur une tuile voisine aléatoire
+        final adj = _adjacentPositions(row, col).where((p) => grid[p.dx.toInt()][p.dy.toInt()] != null).toList();
+        if (adj.isNotEmpty) {
+          final target = adj[Random().nextInt(adj.length)];
+          setState(() {
+            grid[target.dx.toInt()][target.dy.toInt()] = custom.BasicGridTile(
+              assetPath: _iconAssetFromType('bug')!,
+              type: 'bug',
+            );
+          });
+        }
         break;
       case 'magnet_link':
+        setState(() => _magnetizedTiles.add(pos));
+        Future.delayed(const Duration(milliseconds: 400), () {
+          setState(() => _magnetizedTiles.remove(pos));
+        });
         _attractNeighbors(row, col);
         break;
       case 'signal_jammer':
+        setState(() => _hiddenTiles.add(pos));
+        Future.delayed(const Duration(milliseconds: 400), () {
+          setState(() => _hiddenTiles.remove(pos));
+        });
         _hideNeighbors(row, col);
         break;
       case 'encrypted_link':
-        // Géré dans _removeTiles (état decrypted)
+        setState(() => _encryptedLinkHighlight.add(pos));
+        Future.delayed(const Duration(milliseconds: 400), () {
+          setState(() => _encryptedLinkHighlight.remove(pos));
+        });
         break;
       case 'quantum_loop':
-        // Joker : déjà géré par la logique de match
+        setState(() => _quantumLoopHighlight.add(pos));
+        Future.delayed(const Duration(milliseconds: 400), () {
+          setState(() => _quantumLoopHighlight.remove(pos));
+        });
         break;
       case 'trap_hole':
-        // Non supprimable : rien à faire
+        setState(() => _trapHoleHighlight.add(pos));
+        Future.delayed(const Duration(milliseconds: 400), () {
+          setState(() => _trapHoleHighlight.remove(pos));
+        });
         break;
       case 'virus_injector':
-        _contaminateAllNeighbors(row, col);
+        setState(() => _virusInjectorHighlight.add(pos));
+        Future.delayed(const Duration(milliseconds: 400), () {
+          setState(() => _virusInjectorHighlight.remove(pos));
+        });
+        // Contamine toutes les voisines en bug
+        for (final p in _adjacentPositions(row, col)) {
+          if (grid[p.dx.toInt()][p.dy.toInt()] != null) {
+            setState(() {
+              grid[p.dx.toInt()][p.dy.toInt()] = custom.BasicGridTile(
+                assetPath: _iconAssetFromType('bug')!,
+                type: 'bug',
+              );
+            });
+          }
+        }
         break;
       case 'power_node':
-        _applyPowerNodeBonus();
+        setState(() => _powerNodeHighlight.add(pos));
+        Future.delayed(const Duration(milliseconds: 400), () {
+          setState(() => _powerNodeHighlight.remove(pos));
+        });
+        // Bonus : +5 coups ou +10 secondes
+        if (goal is TimedRemoveIconsGoal) {
+          setState(() => _timeLeft += 10);
+        } else {
+          setState(() => movesLeft += 5);
+        }
+        break;
+      default:
         break;
     }
+  }
+
+  List<Offset> _adjacentPositions(int row, int col) {
+    final List<Offset> adj = [];
+    for (final d in [
+      const Offset(-1, 0),
+      const Offset(1, 0),
+      const Offset(0, -1),
+      const Offset(0, 1),
+    ]) {
+      final r = row + d.dx.toInt();
+      final c = col + d.dy.toInt();
+      if (r >= 0 && r < GridBoard.gridSize && c >= 0 && c < GridBoard.gridSize) {
+        adj.add(Offset(r.toDouble(), c.toDouble()));
+      }
+    }
+    return adj;
   }
 
   void _contaminateRandomNeighbor(int row, int col) {
@@ -818,30 +904,27 @@ class _GridBoardState extends State<GridBoard> {
     }
   }
 
+  // Correction Magnet Link : swap circulaire
   void _attractNeighbors(int row, int col) {
     final neighbors = _getNeighbors(row, col);
+    if (neighbors.length < 2) return;
+    // Swap circulaire : seules les voisines tournent, le centre reste inchangé
     setState(() {
-      _magnetizedTiles = {Offset(row.toDouble(), col.toDouble()), ...neighbors};
-    });
-    for (final pos in neighbors) {
-      final tile = grid[pos.dx.toInt()][pos.dy.toInt()];
-      if (tile != null) {
-        grid[row][col] = tile;
-        grid[pos.dx.toInt()][pos.dy.toInt()] = null;
+      final tiles = neighbors.map((pos) => grid[pos.dx.toInt()][pos.dy.toInt()]).toList();
+      for (int i = 0; i < neighbors.length; i++) {
+        final fromIdx = (i - 1 + neighbors.length) % neighbors.length;
+        grid[neighbors[i].dx.toInt()][neighbors[i].dy.toInt()] = tiles[fromIdx];
       }
-    }
-    Future.delayed(const Duration(milliseconds: 500), () {
-      setState(() {
-        _magnetizedTiles.clear();
-      });
     });
   }
 
+  // Correction Signal Jammer : les tuiles restent cachées jusqu'au prochain coup
   void _hideNeighbors(int row, int col) {
     final neighbors = _getNeighbors(row, col);
     setState(() {
       _hiddenTiles.addAll(neighbors);
     });
+    // Ne pas retirer _hiddenTiles ici, il sera vidé dans _removeTiles (déjà fait)
   }
 
   void _contaminateAllNeighbors(int row, int col) {
@@ -1057,40 +1140,45 @@ class _GridBoardState extends State<GridBoard> {
                                 if (tile == null) {
                                   return const SizedBox.shrink();
                                 }
-                                final isHidden = _hiddenTiles.contains(Offset(row.toDouble(), col.toDouble()));
-                                final isMagnetized = _magnetizedTiles.contains(Offset(row.toDouble(), col.toDouble()));
-                                final isEmpPulse = _empPulseHighlight.contains(Offset(row.toDouble(), col.toDouble()));
+                                final pos = Offset(row.toDouble(), col.toDouble());
+                                String? highlightEffect;
+                                // Priorité des effets visuels : EMP > Magnet > Jammer > autres
+                                if (_empPulseHighlight.contains(pos)) {
+                                  highlightEffect = 'emp_pulse';
+                                } else if (_magnetizedTiles.contains(pos)) {
+                                  highlightEffect = 'magnet';
+                                } else if (_hiddenTiles.contains(pos)) {
+                                  highlightEffect = 'signal_jammer';
+                                } else if (_trojanHighlight.contains(pos)) {
+                                  highlightEffect = 'trojan';
+                                } else if (_virusInjectorHighlight.contains(pos)) {
+                                  highlightEffect = 'virus_injector';
+                                } else if (_encryptedLinkHighlight.contains(pos)) {
+                                  highlightEffect = 'encrypted_link';
+                                } else if (_quantumLoopHighlight.contains(pos)) {
+                                  highlightEffect = 'quantum_loop';
+                                } else if (_trapHoleHighlight.contains(pos)) {
+                                  highlightEffect = 'trap_hole';
+                                } else if (_powerNodeHighlight.contains(pos)) {
+                                  highlightEffect = 'power_node';
+                                }
+                                // TODO : pour Trojan, Virus Injector, Encrypted Link, Quantum Loop, Trap Hole, Power Node,
+                                // il faudrait des états temporaires/overlays par effet (à brancher lors de l'effet)
                                 return Opacity(
-                                  opacity: isHidden ? 0.3 : 1.0,
+                                  opacity: _hiddenTiles.contains(pos) ? 0.3 : 1.0,
                                   child: Stack(
                                     alignment: Alignment.center,
                                     children: [
                                       Container(
-                                        decoration: isEmpPulse
-                                            ? BoxDecoration(
-                                                border: Border.all(color: Colors.cyanAccent, width: 6),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.cyanAccent.withOpacity(0.7),
-                                                    blurRadius: 16,
-                                                    spreadRadius: 2,
-                                                  ),
-                                                ],
-                                                borderRadius: BorderRadius.circular(12),
-                                              )
-                                            : isMagnetized
-                                                ? BoxDecoration(
-                                                    border: Border.all(color: Colors.cyanAccent, width: 4),
-                                                    borderRadius: BorderRadius.circular(12),
-                                                  )
-                                                : null,
+                                        decoration: null,
                                         child: CyberTile(
                                           assetPath: tile.assetPath,
                                           isBeingRemoved: false,
                                           tile: tile,
+                                          highlightEffect: highlightEffect,
                                         ),
                                       ),
-                                      if (isHidden)
+                                      if (_hiddenTiles.contains(pos))
                                         const Positioned.fill(
                                           child: Center(
                                             child: Text(
