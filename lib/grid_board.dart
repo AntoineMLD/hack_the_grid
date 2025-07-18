@@ -501,6 +501,18 @@ class _GridBoardState extends State<GridBoard> {
   }
 
   void _removeTiles(List<Offset> tiles) {
+    // Vérifier que le groupe n'est pas composé uniquement de Quantum Loop
+    final hasNonQuantum = tiles.any((pos) {
+      final tile = grid[pos.dx.toInt()][pos.dy.toInt()];
+      return tile != null && tile.type != 'quantum_loop';
+    });
+    if (!hasNonQuantum) {
+      setState(() {
+        selected.clear();
+        isDragging = false;
+      });
+      return;
+    }
     // Débloquer toutes les tuiles cachées par Signal Jammer
     setState(() {
       _hiddenTiles.clear();
@@ -620,9 +632,12 @@ class _GridBoardState extends State<GridBoard> {
     final firstTile = grid[selected.first.dx.toInt()][selected.first.dy.toInt()];
     final currentTile = grid[pos.dx.toInt()][pos.dy.toInt()];
     if (firstTile == null || currentTile == null) return;
-    if (currentTile.type != firstTile.type) return;
     if (selected.contains(pos)) return;
     if (!_isAdjacent(selected.last, pos)) return;
+    // Quantum Loop : joker, peut être sélectionnée avec n'importe quel type
+    final isQuantumFirst = firstTile.type == 'quantum_loop';
+    final isQuantumCurrent = currentTile.type == 'quantum_loop';
+    if (!isQuantumFirst && !isQuantumCurrent && currentTile.type != firstTile.type) return;
     setState(() {
       selected.add(pos);
     });
@@ -660,14 +675,17 @@ class _GridBoardState extends State<GridBoard> {
       final firstTile = grid[first.dx.toInt()][first.dy.toInt()];
       final currentTile = grid[row][col];
       if (firstTile == null || currentTile == null) return;
-      if (currentTile.type == firstTile.type) {
-        _removeTiles([first, Offset(row.toDouble(), col.toDouble())]);
-      } else {
+      // Quantum Loop : joker, peut être sélectionnée avec n'importe quel type
+      final isQuantumFirst = firstTile.type == 'quantum_loop';
+      final isQuantumCurrent = currentTile.type == 'quantum_loop';
+      if (!isQuantumFirst && !isQuantumCurrent && currentTile.type != firstTile.type) {
         setState(() {
           selected.clear();
           if (!(goal is TimedRemoveIconsGoal)) movesLeft--;
         });
+        return;
       }
+      _removeTiles([first, Offset(row.toDouble(), col.toDouble())]);
       return;
     }
     setState(() => selected.clear());
